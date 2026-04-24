@@ -1,5 +1,14 @@
 extends CharacterBody2D
 
+@export var jump_height: float
+@export var jump_time_to_peak: float
+@export var jump_time_to_descent: float
+
+@onready var jump_velocity: float = (-2 * jump_height) / jump_time_to_peak
+@onready var jump_gravity: float = (2 * jump_height) / (jump_time_to_peak ** 2)
+@onready var fall_gravity: float = (2 * jump_height) / (jump_time_to_descent ** 2)
+@onready var fall_velocity: float = (2 * jump_height) / jump_time_to_descent
+
 @onready var wall_slide_ray_cast: RayCast2D = $WallSlideRayCast
 @onready var animated_sprite: AnimatedSprite2D = $Sprite
 @onready var coyote_timer: Timer = $CoyoteTimer
@@ -15,7 +24,7 @@ enum STATE {
 const WALK_VELOCITY := 100.0
 const JUMP_VELOCITY := -300.0
 const JUMP_DECELERATION := 1000.0
-const FALL_VELOCITY := 300.0
+const FALL_VELOCITY := 400.0
 const FALL_GRAVITY := 1000.0
 const WALL_SLIDE_GRAVITY := 300.0
 const WALL_SLIDE_VELOCITY := 500.0
@@ -46,7 +55,8 @@ func switch_state(to_state: STATE) -> void:
 				
 		STATE.JUMP:
 			animated_sprite.play("jump")
-			velocity.y = JUMP_VELOCITY
+			velocity.y = jump_velocity
+			#velocity.y = JUMP_VELOCITY
 			coyote_timer.stop()
 		
 		STATE.WALL_SLIDE:
@@ -55,14 +65,16 @@ func switch_state(to_state: STATE) -> void:
 			
 		STATE.WALL_JUMP:
 			animated_sprite.play("jump")
-			velocity.y = WALL_JUMP_VELOCITY
+			velocity.y = jump_velocity
+			#velocity.y = WALL_JUMP_VELOCITY
 			set_facing_direction(-facing_direction)
 			saved_position = position
 
 func process_state(delta: float) -> void:
 	match active_state:
 		STATE.FALL:
-			velocity.y = move_toward(velocity.y, FALL_VELOCITY, FALL_GRAVITY * delta)
+			velocity.y = move_toward(velocity.y, fall_velocity, fall_gravity * delta)
+			#velocity.y = move_toward(velocity.y, FALL_VELOCITY, FALL_GRAVITY * delta)
 			handle_movement()
 			if is_on_floor():
 				switch_state(STATE.FLOOR)
@@ -84,14 +96,16 @@ func process_state(delta: float) -> void:
 				switch_state(STATE.JUMP)
 				
 		STATE.JUMP:
-			velocity.y = move_toward(velocity.y, 0, JUMP_DECELERATION * delta)
+			velocity.y = move_toward(velocity.y, 0, jump_gravity * delta)
+			#velocity.y = move_toward(velocity.y, 0, JUMP_DECELERATION * delta)
 			handle_movement()
 			if Input.is_action_just_released("jump") or velocity.y >= 0:
 				velocity.y = 0
 				switch_state(STATE.FALL)
 		
 		STATE.WALL_JUMP:
-			velocity.y = move_toward(velocity.y, 0, JUMP_DECELERATION * delta)
+			velocity.y = move_toward(velocity.y, 0, jump_gravity * delta)
+			#velocity.y = move_toward(velocity.y, 0, JUMP_DECELERATION * delta)
 			var distance_jumped := absf(position.x - saved_position.x)
 			if distance_jumped >= WALL_JUMP_LENGTH or can_wall_slide():
 				# Transition into normal jumping state, carrying the momentum upward
